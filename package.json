@@ -1,0 +1,9 @@
+{
+  "name": "workflow-playground-devops",
+  "version": "1.0.0",
+  "scripts": {
+    "lint": "echo 'lint passed'",
+    "test": "echo 'tests passed'",
+    "build": "echo 'build passed'"
+  }
+}

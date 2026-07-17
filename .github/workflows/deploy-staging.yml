@@ -36,19 +36,20 @@ jobs:
       # ────────────────────────────────────────────────────────────────────────
 
       - name: Deploy to Staging Server via SSH
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: 10.94.186.44
-          username: deploy
-          key: ${{ secrets.STAGING_SSH_KEY }}
-          port: 22
-          script: |
+        env:
+          SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
+        run: |
+          echo "$SSH_KEY" > /tmp/deploy_key
+          chmod 600 /tmp/deploy_key
+          ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no deploy@10.94.186.44 << 'ENDSSH'
             cd /var/www/webapp
             git fetch origin
             git checkout ${{ github.head_ref }}
             git pull origin ${{ github.head_ref }}
             npm ci
             REACT_APP_ENV=staging npm run build
+          ENDSSH
+          rm -f /tmp/deploy_key
 
       - name: Update PR label — mark as deployed to staging
         if: success()

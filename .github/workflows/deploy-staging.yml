@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: staging
-      url: https://staging.yourapp.com   # ← REPLACE with your staging URL
+      url: http://workflow-playground.172.16.16.121.nip.io
 
     steps:
       - name: Checkout code
@@ -41,13 +41,14 @@ jobs:
           host: ${{ secrets.STAGING_SERVER_HOST }}
           username: ${{ secrets.STAGING_SERVER_USER }}
           key: ${{ secrets.STAGING_SSH_KEY }}
+          port: 2222
           script: |
-            cd /var/www/staging          # ← REPLACE with your staging path
+            cd /var/www/webapp
             git fetch origin
             git checkout ${{ github.head_ref }}
             git pull origin ${{ github.head_ref }}
-            npm ci --production
-            pm2 restart app-staging      # ← REPLACE with your process manager command
+            npm ci
+            REACT_APP_ENV=staging npm run build
 
       - name: Update PR label — mark as deployed to staging
         if: success()

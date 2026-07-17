@@ -60,7 +60,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: production           # Requires manual approval in GitHub Environments settings
-      url: https://yourapp.com   # ← REPLACE with your production URL
+      url: http://workflow-playground.172.16.16.121.nip.io
 
     steps:
       - name: Checkout production
@@ -131,11 +131,14 @@ jobs:
           host: ${{ secrets.PROD_SERVER_HOST }}
           username: ${{ secrets.PROD_SERVER_USER }}
           key: ${{ secrets.PROD_SSH_KEY }}
+          port: 2222
           script: |
-            cd /var/www/production        # ← REPLACE with your production path
+            cd /var/www/webapp
+            git fetch origin
+            git checkout production
             git pull origin production
-            npm ci --production
-            pm2 restart app-production    # ← REPLACE with your process manager command
+            npm ci
+            REACT_APP_ENV=production npm run build
 
       - name: Update PR label — mark as deployed to production
         if: success()

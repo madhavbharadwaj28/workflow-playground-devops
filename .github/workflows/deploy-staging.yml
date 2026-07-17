@@ -8,7 +8,7 @@ jobs:
   deploy-staging:
     name: Deploy to Staging Environment
     if: "github.event.label.name == 'status: approved-for-staging'"
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     environment:
       name: staging
       url: http://workflow-playground.172.16.16.121.nip.io
@@ -38,10 +38,10 @@ jobs:
       - name: Deploy to Staging Server via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.STAGING_SERVER_HOST }}
-          username: ${{ secrets.STAGING_SERVER_USER }}
+          host: 10.94.186.44
+          username: deploy
           key: ${{ secrets.STAGING_SSH_KEY }}
-          port: 2222
+          port: 22
           script: |
             cd /var/www/webapp
             git fetch origin

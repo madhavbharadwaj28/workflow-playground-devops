@@ -57,7 +57,7 @@ jobs:
   deploy-production:
     name: Deploy to Production Environment
     needs: validate
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     environment:
       name: production           # Requires manual approval in GitHub Environments settings
       url: http://workflow-playground.172.16.16.121.nip.io
@@ -128,10 +128,10 @@ jobs:
       - name: Deploy to Production Server via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.PROD_SERVER_HOST }}
-          username: ${{ secrets.PROD_SERVER_USER }}
+          host: 10.94.186.44
+          username: deploy
           key: ${{ secrets.PROD_SSH_KEY }}
-          port: 2222
+          port: 22
           script: |
             cd /var/www/webapp
             git fetch origin

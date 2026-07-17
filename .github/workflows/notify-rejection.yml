@@ -38,30 +38,3 @@ jobs:
               ].join('\n')
             });
 
-      - name: Send email to developer
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: ${{ secrets.EMAIL_SMTP_HOST }}
-          server_port: 587
-          secure: false
-          username: ${{ secrets.EMAIL_SMTP_USER }}
-          password: ${{ secrets.EMAIL_SMTP_PASSWORD }}
-          to: ${{ secrets.QA_TEAM_EMAIL }}   # ← Replace with a way to get dev's email, or use a team DL
-          from: "DevOps Bot <devops@yourcompany.com>"
-          subject: "❌ Feature Rejected: ${{ github.event.pull_request.title }}"
-          body: |
-            Hi Team,
-
-            The following feature was rejected and needs rework.
-
-            ──────────────────────────────────────────────────────────
-            Feature   : ${{ github.event.pull_request.title }}
-            Branch    : ${{ github.head_ref }}
-            Author    : ${{ github.event.pull_request.user.login }}
-            PR Link   : ${{ github.event.pull_request.html_url }}
-            ──────────────────────────────────────────────────────────
-
-            Please check the PR comments for details on what needs to be fixed.
-
-            Thanks,
-            Automated DevOps Pipeline

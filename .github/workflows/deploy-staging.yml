@@ -8,10 +8,10 @@ jobs:
   deploy-staging:
     name: Deploy to Staging Environment
     if: "github.event.label.name == 'status: approved-for-staging'"
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     environment:
       name: staging
-      url: https://staging.yourapp.com   # ← REPLACE with your staging URL
+      url: http://workflow-playground.172.16.16.121.nip.io
 
     steps:
       - name: Checkout code
@@ -23,7 +23,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'npm'
 
       - name: Install dependencies
@@ -36,18 +36,20 @@ jobs:
       # ────────────────────────────────────────────────────────────────────────
 
       - name: Deploy to Staging Server via SSH
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.STAGING_SERVER_HOST }}
-          username: ${{ secrets.STAGING_SERVER_USER }}
-          key: ${{ secrets.STAGING_SSH_KEY }}
-          script: |
-            cd /var/www/staging          # ← REPLACE with your staging path
+        env:
+          SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
+        run: |
+          echo "$SSH_KEY" > /tmp/deploy_key
+          chmod 600 /tmp/deploy_key
+          ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no deploy@10.94.186.44 << 'ENDSSH'
+            cd /var/www/webapp
             git fetch origin
             git checkout ${{ github.head_ref }}
             git pull origin ${{ github.head_ref }}
-            npm ci --production
-            pm2 restart app-staging      # ← REPLACE with your process manager command
+            npm ci
+            REACT_APP_ENV=staging npm run build
+          ENDSSH
+          rm -f /tmp/deploy_key
 
       - name: Update PR label — mark as deployed to staging
         if: success()
@@ -67,38 +69,6 @@ jobs:
               labels: ['status: deployed-to-staging']
             });
 
-      - name: Send email to QA Team
-        if: success()
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: ${{ secrets.EMAIL_SMTP_HOST }}
-          server_port: 587
-          secure: false
-          username: ${{ secrets.EMAIL_SMTP_USER }}
-          password: ${{ secrets.EMAIL_SMTP_PASSWORD }}
-          to: ${{ secrets.QA_TEAM_EMAIL }}
-          from: "DevOps Bot <devops@yourcompany.com>"   # ← REPLACE
-          subject: "🧪 Ready for Testing: ${{ github.event.pull_request.title }}"
-          body: |
-            Hi QA Team,
-
-            A new feature is ready for testing on the staging environment.
-
-            ──────────────────────────────────────────────────────────
-            Feature   : ${{ github.event.pull_request.title }}
-            Branch    : ${{ github.head_ref }}
-            Author    : ${{ github.event.pull_request.user.login }}
-            PR Link   : ${{ github.event.pull_request.html_url }}
-            Staging   : https://staging.yourapp.com
-            ──────────────────────────────────────────────────────────
-
-            Please test the feature and update the PR label accordingly:
-
-              ✅ Tests Pass → Add label: "status: approved-for-production"
-              ❌ Tests Fail → Add label: "status: rejected" and comment findings on the PR
-
-            Thanks,
-            Automated DevOps Pipeline
 
       - name: Handle deployment failure
         if: failure()

@@ -57,10 +57,10 @@ jobs:
   deploy-production:
     name: Deploy to Production Environment
     needs: validate
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     environment:
       name: production           # Requires manual approval in GitHub Environments settings
-      url: https://yourapp.com   # ← REPLACE with your production URL
+      url: http://workflow-playground.172.16.16.121.nip.io
 
     steps:
       - name: Checkout production
@@ -72,7 +72,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'npm'
 
       - name: Install dependencies
@@ -126,16 +126,20 @@ jobs:
             });
 
       - name: Deploy to Production Server via SSH
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.PROD_SERVER_HOST }}
-          username: ${{ secrets.PROD_SERVER_USER }}
-          key: ${{ secrets.PROD_SSH_KEY }}
-          script: |
-            cd /var/www/production        # ← REPLACE with your production path
+        env:
+          SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
+        run: |
+          echo "$SSH_KEY" > /tmp/deploy_key
+          chmod 600 /tmp/deploy_key
+          ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no deploy@10.94.186.44 << 'ENDSSH'
+            cd /var/www/webapp
+            git fetch origin
+            git checkout production
             git pull origin production
-            npm ci --production
-            pm2 restart app-production    # ← REPLACE with your process manager command
+            npm ci
+            REACT_APP_ENV=production npm run build
+          ENDSSH
+          rm -f /tmp/deploy_key
 
       - name: Update PR label — mark as deployed to production
         if: success()
@@ -155,29 +159,3 @@ jobs:
               labels: ['status: deployed-to-production']
             });
 
-      - name: Notify stakeholders — Production deployment complete
-        if: success()
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: ${{ secrets.EMAIL_SMTP_HOST }}
-          server_port: 587
-          secure: false
-          username: ${{ secrets.EMAIL_SMTP_USER }}
-          password: ${{ secrets.EMAIL_SMTP_PASSWORD }}
-          to: "${{ secrets.PRODUCT_OWNER_EMAIL }},${{ secrets.CTO_EMAIL }}"
-          from: "DevOps Bot <devops@yourcompany.com>"   # ← REPLACE
-          subject: "🚀 LIVE in Production: ${{ needs.validate.outputs.pr_title }} (${{ inputs.release_version }})"
-          body: |
-            The following feature is now LIVE in production.
-
-            ──────────────────────────────────────────────────────────
-            Feature   : ${{ needs.validate.outputs.pr_title }}
-            Version   : ${{ inputs.release_version }}
-            Author    : ${{ needs.validate.outputs.pr_author }}
-            PR        : https://github.com/${{ github.repository }}/pull/${{ inputs.pr_number }}
-            Live URL  : https://yourapp.com
-            Notes     : ${{ inputs.deploy_notes || 'None' }}
-            ──────────────────────────────────────────────────────────
-
-            Thanks,
-            Automated DevOps Pipeline

@@ -7,7 +7,7 @@ on:
 jobs:
   notify-rejection:
     name: Notify developer of rejection
-    if: github.event.label.name == 'status: rejected'
+    if: "github.event.label.name == 'status: rejected'"
     runs-on: ubuntu-latest
 
     steps:
